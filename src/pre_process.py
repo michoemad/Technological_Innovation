@@ -2,8 +2,11 @@ import nltk
 from nltk.corpus import stopwords
 import argparse
 import pandas as pd
+import numpy as np
 import glob
 import os
+
+nltk.download("stopwords")
 cached = stopwords.words("english")
 def remove_stopwords(in_str):
     return " ".join([x for x in in_str.split() if x not in cached]) 
@@ -23,10 +26,16 @@ if __name__ == "__main__":
     for filepath in glob.glob(args.folderpath+"*.csv"):
         df = pd.read_csv(filepath)
         new = []
+        # Hack, can remove
+        if (colname+"_clean" in df.keys()):
+            continue
         for _,x in df.iterrows():
-            new.append(remove_stopwords(x[colname]))
+            if x.notna()[colname]:
+                new.append(remove_stopwords(x[colname]))
+            else:
+                new.append(np.nan)
         df[colname] = new
-        new_name = os.path.splitext(os.path.basename(filepath))[0] + "_clean.csv"
+        new_name = os.path.splitext(os.path.basename(filepath))[0] + ".csv"
         df = df.rename(columns={colname:colname+"_clean"})
     # Save clean CSVs
         df.to_csv(args.output+new_name)
