@@ -13,16 +13,15 @@ def make_pubs_vectors(in_filename: str, model: SentenceTransformer, out_filename
     # Take the column and run it through sbert. We assume that we are given a string with no '.'
     
     projections = []
+    keys = []
     for _,row in df.iterrows():
         if row.notna()[colname]:
-            projections.append([row[key],model.encode(row[colname])])
-        else:
-            projections.append([row[key],np.nan])
-    proj_name = "projections_{}"%colname
-    # df[proj_name] = [tuple(x) if not np.isnan(np.min(x)) else x for x in projections]
-    # df_new = df[[key,proj_name]].copy()
-    # df_new.to_csv(out_filename)
-    np.savetxt(out_filename, projections, delimiter=",", fmt="%s")
+            projections.append(model.encode(row[colname]))
+            keys.append(row[key])
+    proj_name = "projections_{}".format(colname)
+    df_new = pd.DataFrame(data=keys,columns=[key])
+    df_new[proj_name] = [tuple(x) for x in projections]
+    df_new.to_csv(out_filename)
 
 def make_pubs_vectors_in_dir(dirname: str, out_dir: str, model: SentenceTransformer, has_abstract: bool = False, abstract_only: bool = False, abs_by_sent: bool = False) -> None:
     for filename in os.listdir(dirname):
