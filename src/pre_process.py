@@ -1,19 +1,34 @@
 import nltk
 from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
 import argparse
 import pandas as pd
 import numpy as np
 import glob
-import os
+import os,re
 
 nltk.download("stopwords")
+# nltk.download("wordnet")
 cached = stopwords.words("english")
+punctuation = [".", ",", "'", "\"", ":", ";", "?", "(", ")", "[", "]"]
+
 def remove_stopwords(in_str):
     return " ".join([x for x in in_str.split() if x not in cached]) 
+
+def remove_unwanted_chars(text: str):
+    no_brackets = re.sub("([\(\[]).*?([\)\]])", "", text)
+    no_digits = re.sub("\d+\.*\d*%*", "", no_brackets)
+    no_newlines = re.sub("\n|\t", "", no_digits)
+    no_punc = "".join([ch for ch in no_newlines if ch not in punctuation])
+    return no_punc
+
+def lemma(text: str,lemmatizer: WordNetLemmatizer):
+    return " ".join([lemmatizer.lemmatize(x) for x in text.lower().split()])
 
 # Need to take in some CSV filepaths while specifying attributes and fnames
 # and generate new filepaths with _clean appended and stopwords removed
 if __name__ == "__main__":
+    lemmatizer = WordNetLemmatizer()
     parser = argparse.ArgumentParser(description='Clean texts')
     parser.add_argument('folderpath',
                         help='Folder of CSV file to clean')
@@ -26,17 +41,17 @@ if __name__ == "__main__":
     for filepath in glob.glob(args.folderpath+"*.csv"):
         df = pd.read_csv(filepath)
         new = []
-        # Hack, can remove
-        if (colname+"_clean" in df.keys()):
-            continue
         for _,x in df.iterrows():
             if x.notna()[colname]:
-                new.append(remove_stopwords(x[colname]))
+                t = remove_stopwords(x[colname])
+                t = remove_unwanted_chars(t)
+                t = lemma(t,lemmatizer)
+                new.append(t)
             else:
                 new.append(np.nan)
         df[colname] = new
         new_name = os.path.splitext(os.path.basename(filepath))[0] + ".csv"
-        df = df.rename(columns={colname:colname+"_clean"})
+        df = df.rename(columns={colname:colname})
     # Save clean CSVs
         df.to_csv(args.output+new_name)
         
