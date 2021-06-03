@@ -41,6 +41,7 @@ if __name__ == "__main__":
     # Now read CSV file on every column name
     for filepath in glob.glob(os.path.join(args.folderpath,"*.csv")):
         df = pd.read_csv(filepath)
+        df = df.dropna()
         new = []
         keys = []
         for _,x in df.iterrows():

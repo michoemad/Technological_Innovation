@@ -86,7 +86,7 @@ def make_pubs_vectors(in_filename: str, model, out_filename: str, colname: str, 
     #         projections.append(get_BERT_embedding(row[colname],context))
     #         keys.append(row[key])
     # proj_name = "projections_{}".format(colname)
-    df_new = pd.DataFrame(data={key:keys,colname:projections})
+    df_new = pd.DataFrame(data={key:keys,"BERT":projections})
     df_new.set_index(key)
     df_new.to_pickle(out_filename)
 
@@ -100,7 +100,10 @@ def make_pubs_vectors_in_dir(dirname: str, out_dir: str, model, colname: str,key
             make_pubs_vectors(full_path, model, new_path, colname,key,context)
 
 if __name__ == "__main__":
-#   make_pubs_vectors_in_dir("/content/drive/MyDrive/NLP/Dataset/clean","/content/drive/MyDrive/NLP/Dataset/BERT/Abstract/Original",
-# model,"text_clean","publication_number","[abstract]")
-  INPUT = "/content/drive/MyDrive/NLP/Dataset/clean/A47F510_clean.csv"
-  make_pubs_vectors(INPUT,model,"/content/drive/MyDrive/NLP/Dataset/BERT/Abstract/Original","text_clean","publication_number","[abstract]")
+  INPUT = "/content/drive/MyDrive/NLP/Dataset/clean/Abstract/"
+  make_pubs_vectors_in_dir(INPUT,"/content/drive/MyDrive/NLP/Dataset/BERT/Abstract/Original",
+model,"text_clean","publication_number","[abstract]")
+  # Claims
+  INPUT = "/content/drive/MyDrive/NLP/Dataset/clean/Claim/"
+  make_pubs_vectors_in_dir(INPUT,"/content/drive/MyDrive/NLP/Dataset/BERT/Claim/Original",
+model,"claims_clean","publication_number","[claim]")
