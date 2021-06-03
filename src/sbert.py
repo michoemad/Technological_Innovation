@@ -19,19 +19,22 @@ def make_pubs_vectors(in_filename: str, model: SentenceTransformer, out_filename
             projections.append(model.encode(row[colname]))
             keys.append(row[key])
     proj_name = "projections_{}".format(colname)
-    df_new = pd.DataFrame(data=keys,columns=[key])
-    df_new[proj_name] = [tuple(x) for x in projections]
-    df_new.to_csv(out_filename)
+    df_new = pd.DataFrame(data={key:keys,colname:projections})
+    df_new.set_index(key)
+    df_new.to_pickle(out_filename)
 
-def make_pubs_vectors_in_dir(dirname: str, out_dir: str, model: SentenceTransformer, has_abstract: bool = False, abstract_only: bool = False, abs_by_sent: bool = False) -> None:
+def make_pubs_vectors_in_dir(dirname: str, out_dir: str, model: SentenceTransformer, colname: str,key:str) -> None:
     for filename in os.listdir(dirname):
         if filename.endswith(".csv"):
+            # for debugging
+            print(filename)
             full_path = os.path.join(dirname, filename)
             new_path = os.path.join(out_dir, filename)
-            make_pubs_vectors(full_path, model, new_path, colname)
+            make_pubs_vectors(full_path, model, new_path, colname,key)
 
 
 if __name__ == "__main__":
     model = SentenceTransformer('bert-base-nli-mean-tokens')
-    make_pubs_vectors("/content/drive/MyDrive/NLP/Dataset/clean/C07H5_clean.csv",model,"temp.csv","text_clean","publication_number")
-    # make_pubs_vectors_in_dir("./data/nobel_winners/medicine/random-sample/abstracts-cleaned", "./data/nobel_winners/medicine/random-sample/sbert-abstracts", model, has_abstract=True, abstract_only=True, abs_by_sent=False)
+    make_pubs_vectors_in_dir("/content/drive/MyDrive/NLP/Dataset/clean","/content/drive/MyDrive/NLP/Dataset/sbert/Claim/Original",
+    model,"claims_clean","publication_number")
+    # make_pubs_vectors("/content/drive/MyDrive/NLP/Dataset/clean/C07H5_clean.csv",model,"temp.csv","text_clean","publication_number")
