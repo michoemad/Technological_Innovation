@@ -12,7 +12,10 @@ import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-
+from itertools import zip_longest
+def grouper(iterable, n, fillvalue=None):
+    args = [iter(iterable)] * n
+    return zip_longest(*args, fillvalue=fillvalue)
 
 # Load the BERT model
 BERT_REPO_PATH = "/content/drive/MyDrive/NLP/my_bert"
@@ -26,6 +29,7 @@ MODEL_DIR = "/content/drive/MyDrive/NLP/BERT/"
 VOCAB = '/content/drive/MyDrive/NLP/BERT/assets.extra/vocab.txt'
 model = tf.compat.v2.saved_model.load(export_dir=MODEL_DIR, tags=['serve'])
 model = model.signatures['serving_default']
+
 
 tokenizer = tokenization.FullTokenizer(VOCAB, do_lower_case=True)
 # Mean pooling layer for combining
@@ -56,12 +60,11 @@ def get_bert_token_input(texts,context):
       'mlm_positions': tf.convert_to_tensor([], dtype=tf.int64)
   }
 
-def get_BERT_embedding(text,context):
-  inputs = get_bert_token_input([text],context)
+def get_BERT_embedding(texts,context):
+  inputs = get_bert_token_input(texts,context)
   response = model(**inputs)
-  avg_embeddings = pooling(
-      tf.reshape(response['encoder_layer'], shape=[1, -1, 1024]))
-  return avg_embeddings.numpy()[0]
+  avg_embeddings = pooling(response['encoder_layer'])
+  return avg_embeddings.numpy()
 
 # convert elements in colname to embeddings using key
 def make_pubs_vectors(in_filename: str, model, out_filename: str, colname: str, key: str,context: str) -> None:
@@ -70,11 +73,19 @@ def make_pubs_vectors(in_filename: str, model, out_filename: str, colname: str, 
     # Take the column and run it through sbert. We assume that we are given a string with no '.'
     projections = []
     keys = []
-    for _,row in df.iterrows():
-        if row.notna()[colname]:
-            projections.append(get_BERT_embedding(row[colname],context))
-            keys.append(row[key])
-    proj_name = "projections_{}".format(colname)
+    Arr = grouper(df[[key,colname]].dropna().values,32)
+    for i in Arr:
+      # remove Nones
+      A = np.array([x for x in list(i) if x is not None])
+      res = get_BERT_embedding(A[:,1],"[abstract]") # input is (Batch,Sentence_len)
+      projections.extend(res)
+      keys.extend(A[:,0])
+    # print(len(projections))
+    # for _,row in df.iterrows():
+    #     if row.notna()[colname]:
+    #         projections.append(get_BERT_embedding(row[colname],context))
+    #         keys.append(row[key])
+    # proj_name = "projections_{}".format(colname)
     df_new = pd.DataFrame(data={key:keys,colname:projections})
     df_new.set_index(key)
     df_new.to_pickle(out_filename)
@@ -89,5 +100,7 @@ def make_pubs_vectors_in_dir(dirname: str, out_dir: str, model, colname: str,key
             make_pubs_vectors(full_path, model, new_path, colname,key,context)
 
 if __name__ == "__main__":
-  make_pubs_vectors_in_dir("/content/drive/MyDrive/NLP/Dataset/clean","/content/drive/MyDrive/NLP/Dataset/BERT/Abstract/Original",
-model,"text_clean","publication_number","[abstract]")
+#   make_pubs_vectors_in_dir("/content/drive/MyDrive/NLP/Dataset/clean","/content/drive/MyDrive/NLP/Dataset/BERT/Abstract/Original",
+# model,"text_clean","publication_number","[abstract]")
+  INPUT = "/content/drive/MyDrive/NLP/Dataset/clean/A47F510_clean.csv"
+  make_pubs_vectors(INPUT,model,"/content/drive/MyDrive/NLP/Dataset/BERT/Abstract/Original","text_clean","publication_number","[abstract]")

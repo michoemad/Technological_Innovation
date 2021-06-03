@@ -8,7 +8,7 @@ import glob
 import os,re
 
 nltk.download("stopwords")
-# nltk.download("wordnet")
+nltk.download("wordnet")
 cached = stopwords.words("english")
 punctuation = [".", ",", "'", "\"", ":", ";", "?", "(", ")", "[", "]"]
 
@@ -23,7 +23,7 @@ def remove_unwanted_chars(text: str):
     return no_punc
 
 def lemma(text: str,lemmatizer: WordNetLemmatizer):
-    return " ".join([lemmatizer.lemmatize(x) for x in text.lower().split()])
+    return " ".join([lemmatizer.lemmatize(x) for x in text.split()])
 
 # Need to take in some CSV filepaths while specifying attributes and fnames
 # and generate new filepaths with _clean appended and stopwords removed
@@ -37,21 +37,21 @@ if __name__ == "__main__":
     parser.add_argument('colname')
     args = parser.parse_args()
     colname = args.colname
+    key = "publication_number"
     # Now read CSV file on every column name
-    for filepath in glob.glob(args.folderpath+"*.csv"):
+    for filepath in glob.glob(os.path.join(args.folderpath,"*.csv")):
         df = pd.read_csv(filepath)
         new = []
+        keys = []
         for _,x in df.iterrows():
-            if x.notna()[colname]:
-                t = remove_stopwords(x[colname])
-                t = remove_unwanted_chars(t)
+                t = remove_unwanted_chars(x[colname])
+                t = t.lower()
+                t = remove_stopwords(t)     
                 t = lemma(t,lemmatizer)
                 new.append(t)
-            else:
-                new.append(np.nan)
-        df[colname] = new
-        new_name = os.path.splitext(os.path.basename(filepath))[0] + ".csv"
-        df = df.rename(columns={colname:colname})
+                keys.append(x[key])
+        df_new = pd.DataFrame(data={key:keys,colname+"_clean":new})
+        new_name = os.path.splitext(os.path.basename(filepath))[0] + "_clean.csv"
     # Save clean CSVs
-        df.to_csv(args.output+new_name)
+        df_new.to_csv(os.path.join(args.output,new_name))
         
